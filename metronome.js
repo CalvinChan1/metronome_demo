@@ -1,22 +1,28 @@
 var metronome = {
 	on: false,
 	current_beat: 1,
+	current_beat_subdivision: 1,
 	bpm: 100,
+	min_bpm: 10,
+	max_bpm: 250,
 	time_sig: [4, 4],
-	subdivision: "quarter",
-	hi_sound: new Audio('Sounds/hiclave.wav'),
-	low_sound: new Audio('Sounds/lowclave.wav'),
+	current_timeout: 60000,
+	subdivision: 1,
+	hi_sound: new Audio('Sounds/Clave/hiclave.wav'),
+	mid_sound: null,
+	low_sound: [], // new Audio('Sounds/Clave/lowclave.wav'),
 	first_beat_accent: true,
-	volume: 50,
-	// timer in seconds
-	timer: 150,
+	volume: 50, // 0-100
+	timer: 0, // timer in seconds
 	clicks: false,
+	timer_init: false,
 	start: function () {
 		this.on = this.on ? false : true;
 
 		clearInterval(this.clicks);
 		this.reset_current_beat();
 		this.play_sound();
+		this.timer_count();
 
 		if (this.on) {
 			this.initate_click();
@@ -28,42 +34,75 @@ var metronome = {
 	play_sound: function() {
 		if (!this.on) return;
 
-		if (this.first_beat_accent && this.current_beat === 1) {
+		if (this.first_beat_accent && this.current_beat === 1 &&
+			this.current_beat_subdivision === 1) {
 			// higher pitched sound
+			console.log("high")
 			this.hi_sound.play();
+		} else if (this.subdivision !== 1 &&
+				   this.current_beat_subdivision === 1) {
+			// mid pitched sound  
+			console.log("mid")
+			this.mid_sound.play();
 		} else {
 			// lower pitched sound
-			this.low_sound.play();
+			console.log("low")
+			console.log("current beat sub: " + this.current_beat_subdivision)
+			this.low_sound[this.current_beat_subdivision].play();
 		}
 	},
-	initate_click: function() {
+	initate_click: function() {	
 		if (this.on) {
+			clearInterval(this.clicks);
 			this.clicks = setInterval(function() {
-				// change current beat
-				if (this.current_beat === this.time_sig[0]) {
+				// reset back to 1
+				if (this.current_beat_subdivision === this.subdivision &&
+					this.current_beat === this.time_sig[0]) {
+					// first beat of the bar
 					this.current_beat = 1;
-				} else {
+					this.current_beat_subdivision = 1;
+				} else if (this.current_beat_subdivision === this.subdivision) {
+					// last subdivision of the beat, will be an offbeat
+					this.current_beat_subdivision = 1;
 					this.current_beat++;
+				} else {
+					// next subdivision in beat
+					this.current_beat_subdivision++;
 				}
 
+				// plays beat that just got incremented, so e
 				$("#beat_count").html(metronome.current_beat);
 				this.play_sound();
-			}.bind(this), (60000 / metronome.bpm))
+			}.bind(this), (this.current_timeout / metronome.bpm))
 		}
 	},
 	increment_bpm: function (adjustBpm, bpmSlider) {
+		if ((adjustBpm === "inc" && this.bpm === this.max_bpm) ||
+			(adjustBpm === "dec" && this.bpm === this.min_bpm)) {
+			return;
+		}
 		if (!bpmSlider) {
 			(adjustBpm === "inc") ? this.bpm++ : this.bpm--;
 		}
 
 		$("#bpm").html(metronome.bpm + " bpm");
-		clearInterval(this.clicks);
 
+		// Note: Admittedly, this is a hacky way to increment the simple-slider.
+		// 		 this is a workaround due to the faulty built-in 'setValue' 
+		//       method that the slider provided.
+		var slider_width = 300,
+			increment_slider_px = slider_width / (this.max_bpm - this.min_bpm),
+			current_slider_posn = parseFloat($('#tempo_slider').find(".dragger").css("left")),
+			new_slider_posn;
+
+		if (adjustBpm === "inc") {
+			new_slider_posn = (current_slider_posn + increment_slider_px).toString() + "px";
+		} else {
+			new_slider_posn = (current_slider_posn - increment_slider_px).toString() + "px";
+		}
+
+		$('#tempo_slider').find(".dragger").css("left", new_slider_posn);
 		this.reset_current_beat();
-		this.initate_click();
-	},
-	slider_logic: function() {
-		//////
 	},
 	time_sig_change: function(num, den) {
 		if (num) {
@@ -72,21 +111,79 @@ var metronome = {
 		} else {
 			$(".denominator-dropdown").html(den + ' <span class="caret"></span>');
 			this.time_sig[1] = den;
+
+			if (den === 2) {
+				this.current_timeout = 120000;
+			} else if (den === 4) {
+				this.current_timeout = 60000;
+			} else if (den === 8) {
+				this.current_timeout = 30000;
+			} else if (den === 16) {
+				this.current_timeout = 15000;
+			}
 		}
+		this.reset_current_beat();
 	},
 	beat_subdivision: function(subdivision) {
 		$(".subdivison-dropdown").html(subdivision + ' <span class="caret"></span>');
 		this.subdivision = subdivision;
+		var quarter_note_timeout = 60000;
+
+		// Assuming denominator is quarters, need to figure out 2, 8, 16
+		// need to fix issue with current_timeout too
+		if (subdivision === "Quarter Notes") {
+			this.subdivision = 1;
+		} else if (subdivision === "8th Notes") {
+			this.subdivision = 2;
+		} else if (subdivision === "Triplets") {
+			this.subdivision = 3;
+		} else if (subdivision === "16th Notes") {
+			this.subdivision = 4;
+		} else if (subdivision === "16th Note Triplets") {
+			this.subdivision = 6;
+		} else if (subdivision === "32nd Notes") {
+			this.subdivision = 8;
+		} else if (subdivision === "Whole Notes") {
+			// this.subdivision = 0.25;
+			this.current_timeout = 240000;
+		} else if (subdivision === "Half Notes") {
+			// this.subdivision = 0.5;
+			this.current_timeout = 120000;
+		} else if (subdivision === "Quintuplets") {
+			this.subdivision = 5;
+		} else if (subdivision === "Septuplets") {
+			this.subdivision = 7;
+		}
+
+		this.current_timeout = quarter_note_timeout / this.subdivision;
+		this.reset_current_beat();
 	},
 	reset_current_beat: function() {
 		this.current_beat = 1;
+		this.current_beat_subdivision = 1;
 		$("#beat_count").html("1");
+
+		this.initate_click();
 	},
 	volume_level: function() {
-		// volume stuff
-	},
-	timer_input: function() {
+		// audio elements go from 0.0 to 1.0
+		var volume = this.volume / 100;
 
+		this.hi_sound.volume = volume;
+		this.mid_sound.volume = volume;
+		for (var i = 0; i < 9; i++) {
+			this.low_sound[i].volume = volume;
+		}
+	},
+	timer_count: function() {
+		if (this.on) {
+			this.timer_init = setInterval(function() {
+				$("#timeplz").html("Seconds Elapsed: " + this.timer);
+				this.timer++;
+			}.bind(this), 1000)
+		} else {
+			clearInterval(this.timer_init);
+		}
 	}
 }
 
@@ -105,6 +202,9 @@ $(document).ready(function() {
 	// Cowbell source:
 	// http://www.denhaku.com/r_box/sr16/sr16perc/hicowbel.wav
 	// http://www.denhaku.com/r_box/sr16/sr16perc/mdcowbel.wav
+
+	// Block source:
+	// 
 
 	$("#start_button").click(function() {
 		metronome.start();
@@ -249,25 +349,58 @@ $(document).ready(function() {
 
 	var $sound_dropdown = $(".sound-dropdown");
 
+	var hi_sound = new Audio('Sounds/Block/hiblock.wav'),
+		mid_sound = new Audio('Sounds/Block/midblock.wav'),
+		low_sound = new Audio('Sounds/Block/lowblock.wav');
+
+	load_sound();
+
 	// Sounds
 	$("#click").click(function() {
 		$sound_dropdown.html('Click <span class="caret"></span>');
-		metronome.hi_sound = new Audio('Sounds/hiblock.wav');
-		metronome.low_sound = new Audio('Sounds/midblock.wav');
+		load_sound('block');
 	});
 
 	$("#clave").click(function() {
 		$sound_dropdown.html('Clave <span class="caret"></span>');
-		metronome.hi_sound = new Audio('Sounds/hiclave.wav');
-		metronome.low_sound = new Audio('Sounds/lowclave.wav');
+		// hi_sound = new Audio('Sounds/Clave/hiclave.wav');
+		// need a med sound, might use audacity to adjust pitch
+		// low_sound = new Audio('Sounds/Clave/lowclave.wav');
+		load_sound('clave');
 	});
 
 	$("#cowbell").click(function() {
 		$sound_dropdown.html('Cowbell <span class="caret"></span>');
-		metronome.hi_sound = new Audio('Sounds/hicowbell.wav');
-		metronome.low_sound = new Audio('Sounds/midcowbell.wav');
+		// hi_sound = new Audio('Sounds/Cowbell/hicowbell.wav');
+		// mid_sound = new Audio('Sounds/Cowbell/hicowbell.wav');
+		// low_sound = new Audio('Sounds/Cowbell/lowcowbell.wav');
+		load_sound('cowbell');
 	});
 
+	function load_sound(sound) {
+		hi_sound = new Audio('Sounds/' + sound + '/hi' + sound + '.wav');
+		mid_sound = new Audio('Sounds/' + sound + '/mid' + sound + '.wav');
+		low_sound = new Audio('Sounds/' + sound + '/low' + sound + '.wav');
+
+		hi_sound.preload = 'auto';
+		mid_sound.preload = 'auto';
+		low_sound.preload = 'auto';
+
+		hi_sound.load();
+		mid_sound.load();
+		low_sound.load();
+
+		metronome.hi_sound = hi_sound.cloneNode();
+		metronome.mid_sound = mid_sound.cloneNode();
+		// metronome.low_sound = low_sound.cloneNode();
+
+		for (var i = 0; i < 9; i++) {
+			metronome.low_sound[i] = low_sound.cloneNode();
+		}
+
+		metronome.volume_level();	
+	}
+	
 	// First Beat Accent button
 	$("#first_beat_accent").click(function() {
 		metronome.first_beat_accent = metronome.first_beat_accent ? false : true;
@@ -288,7 +421,9 @@ $(document).ready(function() {
 	});
 
 	// Timer
-
+	$("#time_reset").click(function() {
+		metronome.timer = 0;
+	})
 
 	// Keyboard shortcuts
 	$(window).keydown(function(e) {
