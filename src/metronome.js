@@ -10,7 +10,7 @@ var metronome = {
 	subdivision: 1,
 	hi_sound: new Audio('Sounds/Clave/hiclave.wav'),
 	mid_sound: null,
-	low_sound: new Audio('Sounds/Clave/lowclave.wav'),
+	low_sound: [], // new Audio('Sounds/Clave/lowclave.wav'),
 	first_beat_accent: true,
 	volume: 50, // 0-100
 	timer: 0, // timer in seconds
@@ -43,14 +43,15 @@ var metronome = {
 				   this.current_beat_subdivision === 1) {
 			// mid pitched sound  
 			console.log("mid")
-			// this.mid_sound.play();
+			this.mid_sound.play();
 		} else {
 			// lower pitched sound
 			console.log("low")
-			this.low_sound.play();
+			console.log("current beat sub: " + this.current_beat_subdivision)
+			this.low_sound[this.current_beat_subdivision].play();
 		}
 	},
-	initate_click: function() {
+	initate_click: function() {	
 		if (this.on) {
 			clearInterval(this.clicks);
 			this.clicks = setInterval(function() {
@@ -121,6 +122,7 @@ var metronome = {
 				this.current_timeout = 15000;
 			}
 		}
+		this.reset_current_beat();
 	},
 	beat_subdivision: function(subdivision) {
 		$(".subdivison-dropdown").html(subdivision + ' <span class="caret"></span>');
@@ -154,9 +156,11 @@ var metronome = {
 		}
 
 		this.current_timeout = quarter_note_timeout / this.subdivision;
+		this.reset_current_beat();
 	},
 	reset_current_beat: function() {
 		this.current_beat = 1;
+		this.current_beat_subdivision = 1;
 		$("#beat_count").html("1");
 
 		this.initate_click();
@@ -166,13 +170,15 @@ var metronome = {
 		var volume = this.volume / 100;
 
 		this.hi_sound.volume = volume;
-		// this.mid_sound.volume = volume;
-		this.low_sound.volume = volume;
+		this.mid_sound.volume = volume;
+		for (var i = 0; i < 9; i++) {
+			this.low_sound[i].volume = volume;
+		}
 	},
 	timer_count: function() {
 		if (this.on) {
 			this.timer_init = setInterval(function() {
-				$("#timeplz").html(this.timer);
+				$("#timeplz").html("Seconds Elapsed: " + this.timer);
 				this.timer++;
 			}.bind(this), 1000)
 		} else {
@@ -343,32 +349,58 @@ $(document).ready(function() {
 
 	var $sound_dropdown = $(".sound-dropdown");
 
+	var hi_sound = new Audio('Sounds/Block/hiblock.wav'),
+		mid_sound = new Audio('Sounds/Block/midblock.wav'),
+		low_sound = new Audio('Sounds/Block/lowblock.wav');
+
+	load_sound();
+
 	// Sounds
 	$("#click").click(function() {
-		$sound_dropdown.html('Cowbell <span class="caret"></span>');
-		metronome.hi_sound = new Audio('Sounds/Block/hiblock.wav');
-		metronome.mid_sound = new Audio('Sounds/Block/midblock.wav');
-		metronome.low_sound = new Audio('Sounds/Block/lowblock.wav');
-		metronome.volume_level();
+		$sound_dropdown.html('Click <span class="caret"></span>');
+		load_sound('block');
 	});
 
 	$("#clave").click(function() {
 		$sound_dropdown.html('Clave <span class="caret"></span>');
-		metronome.hi_sound = new Audio('Sounds/Clave/hiclave.wav');
+		// hi_sound = new Audio('Sounds/Clave/hiclave.wav');
 		// need a med sound, might use audacity to adjust pitch
-		metronome.low_sound = new Audio('Sounds/Clave/lowclave.wav');
-		metronome.volume_level();
+		// low_sound = new Audio('Sounds/Clave/lowclave.wav');
+		load_sound('clave');
 	});
 
 	$("#cowbell").click(function() {
 		$sound_dropdown.html('Cowbell <span class="caret"></span>');
-		metronome.hi_sound = new Audio('Sounds/Cowbell/hicowbell.wav');
-		metronome.mid_sound = new Audio('Sounds/Cowbell/midcowbell.wav');
-		metronome.low_sound = new Audio('Sounds/Cowbell/lowcowbell.wav');
-		metronome.volume_level();
+		// hi_sound = new Audio('Sounds/Cowbell/hicowbell.wav');
+		// mid_sound = new Audio('Sounds/Cowbell/hicowbell.wav');
+		// low_sound = new Audio('Sounds/Cowbell/lowcowbell.wav');
+		load_sound('cowbell');
 	});
 
+	function load_sound(sound) {
+		hi_sound = new Audio('Sounds/' + sound + '/hi' + sound + '.wav');
+		mid_sound = new Audio('Sounds/' + sound + '/mid' + sound + '.wav');
+		low_sound = new Audio('Sounds/' + sound + '/low' + sound + '.wav');
 
+		hi_sound.preload = 'auto';
+		mid_sound.preload = 'auto';
+		low_sound.preload = 'auto';
+
+		hi_sound.load();
+		mid_sound.load();
+		low_sound.load();
+
+		metronome.hi_sound = hi_sound.cloneNode();
+		metronome.mid_sound = mid_sound.cloneNode();
+		// metronome.low_sound = low_sound.cloneNode();
+
+		for (var i = 0; i < 9; i++) {
+			metronome.low_sound[i] = low_sound.cloneNode();
+		}
+
+		metronome.volume_level();	
+	}
+	
 	// First Beat Accent button
 	$("#first_beat_accent").click(function() {
 		metronome.first_beat_accent = metronome.first_beat_accent ? false : true;
