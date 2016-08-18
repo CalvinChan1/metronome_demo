@@ -8,10 +8,7 @@ body {
 #metronome {
 	padding: 0 40px 0 40px;
 	display: inline-block;
-}
-
-#pie_timer {
-	display: inline-block;
+	width: 100%;
 }
 
 /*.button:active {
@@ -49,10 +46,12 @@ body {
 	display: inline-block;
 }
 
-/*second row*/
-#tempo_slider {
-
+#increment_interval {
+	width: 55px;
+	color: black;
 }
+
+/*second row*/
 
 /*third row*/
 #time_sig {
@@ -72,6 +71,10 @@ body {
 }
 
 #denominator {
+	display: inline-block;
+}
+
+#bar_counter {
 	display: inline-block;
 }
 
@@ -107,10 +110,6 @@ body {
 	font-size: 20px
 }
 
-#volume_slider {
-
-}
-
 /*Seventh Row*/
 #beat_count {
 	font-size: 40px;
@@ -128,7 +127,25 @@ body {
 }
 
 /*Eighth Row*/
-#timer_title {
+
+#timeplz {
+	display: inline-block;
+}
+
+#pie_timer {
+	display: inline-block;
+}
+
+.time_reset {
+	padding: 10px 10px 10px 10px;
+	width: 20%;
+	background-color: black;
+	font-size: 15px;
+	color: white;
+	text-align: center;
+}
+
+/*#timer_title {
 	font-size: 25px;
 }
 
@@ -138,11 +155,9 @@ body {
 
 #seconds {
 	display: inline-block;
-}
+}*/
 
-input {
-	width: 35px;
-}
+/*General*/
 
 .dropdown {
 	margin-top: 5px;

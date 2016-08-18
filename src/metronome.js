@@ -1,17 +1,19 @@
 var metronome = {
 	on: false,
-	current_beat: 1,
-	current_beat_subdivision: 1,
 	bpm: 100,
 	min_bpm: 10,
 	max_bpm: 250,
-	time_sig: [4, 4],
+	current_beat: 1,
+	current_beat_subdivision: 1,
 	current_timeout: 60000,
 	subdivision: 1,
+	increment_interval: 1,
+	bar_number: 0,
+	time_sig: [4, 4],
+	first_beat_accent: true,
 	hi_sound: new Audio('Sounds/Clave/hiclave.wav'),
 	mid_sound: null,
-	low_sound: new Audio('Sounds/Clave/lowclave.wav'),
-	first_beat_accent: true,
+	low_sound: [],
 	volume: 50, // 0-100
 	timer: 0, // timer in seconds
 	clicks: false,
@@ -19,7 +21,10 @@ var metronome = {
 	start: function () {
 		this.on = this.on ? false : true;
 
+		// stops click
 		clearInterval(this.clicks);
+
+		// reset and ready metronome for init
 		this.reset_current_beat();
 		this.play_sound();
 		this.timer_count();
@@ -28,6 +33,9 @@ var metronome = {
 			this.initate_click();
 			$("#start_button").html("Stop");
 		} else {
+			this.bar_number = 0;
+			$("#bar_counter").html("Bar Counter: 0");
+
 			$("#start_button").html("Start");
 		}
 	},
@@ -36,21 +44,18 @@ var metronome = {
 
 		if (this.first_beat_accent && this.current_beat === 1 &&
 			this.current_beat_subdivision === 1) {
-			// higher pitched sound
-			console.log("high")
+			// console.log("high")
 			this.hi_sound.play();
 		} else if (this.subdivision !== 1 &&
 				   this.current_beat_subdivision === 1) {
-			// mid pitched sound  
-			console.log("mid")
-			// this.mid_sound.play();
+			// console.log("mid")
+			this.mid_sound.play();
 		} else {
-			// lower pitched sound
-			console.log("low")
-			this.low_sound.play();
+			// console.log("low")
+			this.low_sound[this.current_beat_subdivision].play();
 		}
 	},
-	initate_click: function() {
+	initate_click: function() {	
 		if (this.on) {
 			clearInterval(this.clicks);
 			this.clicks = setInterval(function() {
@@ -60,6 +65,11 @@ var metronome = {
 					// first beat of the bar
 					this.current_beat = 1;
 					this.current_beat_subdivision = 1;
+					
+					// new bar
+					this.bar_number++;
+					$("#bar_counter").html("Bar Counter: " +
+											this.bar_number.toString())
 				} else if (this.current_beat_subdivision === this.subdivision) {
 					// last subdivision of the beat, will be an offbeat
 					this.current_beat_subdivision = 1;
@@ -76,12 +86,15 @@ var metronome = {
 		}
 	},
 	increment_bpm: function (adjustBpm, bpmSlider) {
-		if ((adjustBpm === "inc" && this.bpm === this.max_bpm) ||
-			(adjustBpm === "dec" && this.bpm === this.min_bpm)) {
+		if ((adjustBpm === "inc" &&
+			 this.bpm + this.increment_interval > this.max_bpm) ||
+			(adjustBpm === "dec" &&
+			 this.bpm - this.increment_interval < this.min_bpm)) {
 			return;
 		}
 		if (!bpmSlider) {
-			(adjustBpm === "inc") ? this.bpm++ : this.bpm--;
+			(adjustBpm === "inc") ? this.bpm += this.increment_interval :
+									this.bpm -= this.increment_interval;
 		}
 
 		$("#bpm").html(metronome.bpm + " bpm");
@@ -90,15 +103,12 @@ var metronome = {
 		// 		 this is a workaround due to the faulty built-in 'setValue' 
 		//       method that the slider provided.
 		var slider_width = 300,
-			increment_slider_px = slider_width / (this.max_bpm - this.min_bpm),
+			increment_slider_px = slider_width / (this.max_bpm - this.min_bpm) * this.increment_interval,
 			current_slider_posn = parseFloat($('#tempo_slider').find(".dragger").css("left")),
 			new_slider_posn;
 
-		if (adjustBpm === "inc") {
-			new_slider_posn = (current_slider_posn + increment_slider_px).toString() + "px";
-		} else {
-			new_slider_posn = (current_slider_posn - increment_slider_px).toString() + "px";
-		}
+		(adjustBpm === "inc") ? new_slider_posn = (current_slider_posn + increment_slider_px).toString() + "px" :
+								new_slider_posn = (current_slider_posn - increment_slider_px).toString() + "px";
 
 		$('#tempo_slider').find(".dragger").css("left", new_slider_posn);
 		this.reset_current_beat();
@@ -111,52 +121,51 @@ var metronome = {
 			$(".denominator-dropdown").html(den + ' <span class="caret"></span>');
 			this.time_sig[1] = den;
 
+			function hide_or_show_subdivision_options(show_or_hide) {
+				var subdivisions = [$('#quarter-notes'), $('#triplets'),
+									$('#whole-notes'), $('#half-notes'),
+									$('#quintuplets'), $('#septuplets')]
+
+				for (var i = 0; i < subdivisions.length; i++) {
+					show_or_hide === "show" ? subdivisions[i].show() : subdivisions[i].hide();
+				}
+			}
+
 			if (den === 2) {
 				this.current_timeout = 120000;
+				hide_or_show_subdivision_options("hide");
+				$('#quarter-notes').show();
 			} else if (den === 4) {
 				this.current_timeout = 60000;
+				hide_or_show_subdivision_options("show");
 			} else if (den === 8) {
 				this.current_timeout = 30000;
+				$(".subdivison-dropdown").html('8th Notes <span class="caret"></span>');
+				hide_or_show_subdivision_options("hide");
 			} else if (den === 16) {
 				this.current_timeout = 15000;
+				hide_or_show_subdivision_options("hide");
+				$(".subdivison-dropdown").html('16th Notes <span class="caret"></span>');
+				$('#8th-notes').hide();
+				$('#sextuplets').hide();
 			}
 		}
+		this.reset_current_beat();
 	},
 	beat_subdivision: function(subdivision) {
-		$(".subdivison-dropdown").html(subdivision + ' <span class="caret"></span>');
+		subdivision_name = $("ul").find("[data-subdivision='" + subdivision + "']").html();
+
+		$(".subdivison-dropdown").html(subdivision_name + ' <span class="caret"></span>');
 		this.subdivision = subdivision;
 		var quarter_note_timeout = 60000;
 
-		// Assuming denominator is quarters, need to figure out 2, 8, 16
 		// need to fix issue with current_timeout too
-		if (subdivision === "Quarter Notes") {
-			this.subdivision = 1;
-		} else if (subdivision === "8th Notes") {
-			this.subdivision = 2;
-		} else if (subdivision === "Triplets") {
-			this.subdivision = 3;
-		} else if (subdivision === "16th Notes") {
-			this.subdivision = 4;
-		} else if (subdivision === "16th Note Triplets") {
-			this.subdivision = 6;
-		} else if (subdivision === "32nd Notes") {
-			this.subdivision = 8;
-		} else if (subdivision === "Whole Notes") {
-			// this.subdivision = 0.25;
-			this.current_timeout = 240000;
-		} else if (subdivision === "Half Notes") {
-			// this.subdivision = 0.5;
-			this.current_timeout = 120000;
-		} else if (subdivision === "Quintuplets") {
-			this.subdivision = 5;
-		} else if (subdivision === "Septuplets") {
-			this.subdivision = 7;
-		}
-
 		this.current_timeout = quarter_note_timeout / this.subdivision;
+		this.reset_current_beat();
 	},
 	reset_current_beat: function() {
 		this.current_beat = 1;
+		this.current_beat_subdivision = 1;
 		$("#beat_count").html("1");
 
 		this.initate_click();
@@ -166,13 +175,15 @@ var metronome = {
 		var volume = this.volume / 100;
 
 		this.hi_sound.volume = volume;
-		// this.mid_sound.volume = volume;
-		this.low_sound.volume = volume;
+		this.mid_sound.volume = volume;
+		for (var i = 0; i < 9; i++) {
+			this.low_sound[i].volume = volume;
+		}
 	},
 	timer_count: function() {
 		if (this.on) {
 			this.timer_init = setInterval(function() {
-				$("#timeplz").html(this.timer);
+				$("#timeplz").html("Seconds Elapsed: " + this.timer);
 				this.timer++;
 			}.bind(this), 1000)
 		} else {
@@ -182,8 +193,6 @@ var metronome = {
 }
 
 $(document).ready(function() {
-	// Audio API
-
 	// Click source:
 	// http://www.denhaku.com/r_box/sr16/sr16perc/hi%20block.wav
 	// http://www.denhaku.com/r_box/sr16/sr16perc/md%20block.wav
@@ -212,163 +221,101 @@ $(document).ready(function() {
 		metronome.increment_bpm("dec", false);
 	});
 
+	var $increment_interval = $("#increment_interval");
+	$increment_interval.on("change", function() {
+		var increment_val = $increment_interval[0].value;
+		metronome.increment_interval = parseInt(increment_val);
+	});
+
 	// Beats
-	var $numerator = $(".numerator");
-	var $denominator = $(".denominator");
+	var $numerator = $(".numerator"),
+		$denominator = $(".denominator");
 
-	$numerator.find("#2").click(function() {
-		metronome.time_sig_change(2, false);
-	});
+	function numerator_click_handler(numerator) {
+		$numerator.find("#" + numerator).click(function() {
+			metronome.time_sig_change(numerator, false);
+		});
+	}
 
-	$numerator.find("#3").click(function() {
-		metronome.time_sig_change(3, false);
-	});
+	function denominator_click_handler(denominator) {
+		$denominator.find("#" + denominator).click(function() {
+			metronome.time_sig_change(false, denominator);
+		});
+	}
 
-	$numerator.find("#4").click(function() {
-		metronome.time_sig_change(4, false);
-	});
+	for (var i = 0; i < 18; i++) {
+		numerator_click_handler(i);
+	}
 
-	$numerator.find("#5").click(function() {
-		metronome.time_sig_change(5, false);
-	});
+	for (var j = 1; j < 5; j++) {
+		denominator_click_handler(Math.pow(2, j));
+	}
 
-	$numerator.find("#6").click(function() {
-		metronome.time_sig_change(6, false);
-	});
+	// Subdivisions' event handlers
+	var subdivisions_ids = ["#quarter-notes", "#8th-notes",
+							"#triplets", "#16th-notes",
+							"#sextuplets", "#32nd-notes",
+							"#whole-notes", "#half-notes",
+							"#quintuplets", "#septuplets"]
 
-	$numerator.find("#7").click(function() {
-		metronome.time_sig_change(7, false);
-	});
+	function add_subdivision_click_handler(subdiv_id) {
+		$(subdiv_id).click(function() {
+			var subdiv_number = $(subdiv_id).data("subdivision")
+			metronome.beat_subdivision(subdiv_number);
+		})
+	}
 
-	$numerator.find("#8").click(function() {
-		metronome.time_sig_change(8, false);
-	});
-
-	$numerator.find("#9").click(function() {
-		metronome.time_sig_change(9, false);
-	});
-
-	$numerator.find("#10").click(function() {
-		metronome.time_sig_change(10, false);
-	});
-
-	$numerator.find("#11").click(function() {
-		metronome.time_sig_change(11, false);
-	});
-
-	$numerator.find("#12").click(function() {
-		metronome.time_sig_change(12, false);
-	});
-
-	$numerator.find("#13").click(function() {
-		metronome.time_sig_change(13, false);
-	});
-
-	$numerator.find("#14").click(function() {
-		metronome.time_sig_change(14, false);
-	});
-
-	$numerator.find("#15").click(function() {
-		metronome.time_sig_change(15, false);
-	});
-
-	$numerator.find("#16").click(function() {
-		metronome.time_sig_change(16, false);
-	});
-
-	$numerator.find("#17").click(function() {
-		metronome.time_sig_change(17, false);
-	});
-
-	$numerator.find("#18").click(function() {
-		metronome.time_sig_change(18, false);
-	});
-
-	$denominator.find("#2").click(function() {
-		metronome.time_sig_change(false, 2);
-	});
-
-	$denominator.find("#4").click(function() {
-		metronome.time_sig_change(false, 4);
-	});
-
-	$denominator.find("#8").click(function() {
-		metronome.time_sig_change(false, 8);
-	});
-
-	$denominator.find("#16").click(function() {
-		metronome.time_sig_change(false, 16);
-	});
-
-	// Subdivisions
-	$("#quarter-notes").click(function() {
-		metronome.beat_subdivision("Quarter Notes");
-	});
-
-	$("#8th-notes").click(function() {
-		metronome.beat_subdivision("8th Notes");
-	});
-
-	$("#triplets").click(function() {
-		metronome.beat_subdivision("Triplets");
-	});
-
-	$("#16th-notes").click(function() {
-		metronome.beat_subdivision("16th Notes");
-	});
-
-	$("#sextuplets").click(function() {
-		metronome.beat_subdivision("16th Note Triplets");
-	});
-	
-	$("#32nd-notes").click(function() {
-		metronome.beat_subdivision("32nd Notes");
-	});
-	
-	$("#whole-notes").click(function() {
-		metronome.beat_subdivision("Whole Notes");
-	});
-
-	$("#half-notes").click(function() {
-		metronome.beat_subdivision("Half Notes");
-	});
-	
-	$("#quintuplets").click(function() {
-		metronome.beat_subdivision("Quintuplets");
-	});
-	
-	$("#septuplets").click(function() {
-		metronome.beat_subdivision("Septuplets");
-	});
-
-	var $sound_dropdown = $(".sound-dropdown");
+	for (var i = 0; i < subdivisions_ids.length; i++) {
+		add_subdivision_click_handler(subdivisions_ids[i])
+	}
 
 	// Sounds
+	var $sound_dropdown = $(".sound-dropdown");
+
+	var hi_sound = new Audio('Sounds/clave/hiclave.wav'),
+		mid_sound = new Audio('Sounds/clave/midclave.wav'),
+		low_sound = new Audio('Sounds/clave/lowclave.wav');
+
+	load_sound('clave');
+
 	$("#click").click(function() {
-		$sound_dropdown.html('Cowbell <span class="caret"></span>');
-		metronome.hi_sound = new Audio('Sounds/Block/hiblock.wav');
-		metronome.mid_sound = new Audio('Sounds/Block/midblock.wav');
-		metronome.low_sound = new Audio('Sounds/Block/lowblock.wav');
-		metronome.volume_level();
+		$sound_dropdown.html('Click <span class="caret"></span>');
+		load_sound('block');
 	});
 
 	$("#clave").click(function() {
 		$sound_dropdown.html('Clave <span class="caret"></span>');
-		metronome.hi_sound = new Audio('Sounds/Clave/hiclave.wav');
-		// need a med sound, might use audacity to adjust pitch
-		metronome.low_sound = new Audio('Sounds/Clave/lowclave.wav');
-		metronome.volume_level();
+		load_sound('clave');
 	});
 
 	$("#cowbell").click(function() {
 		$sound_dropdown.html('Cowbell <span class="caret"></span>');
-		metronome.hi_sound = new Audio('Sounds/Cowbell/hicowbell.wav');
-		metronome.mid_sound = new Audio('Sounds/Cowbell/midcowbell.wav');
-		metronome.low_sound = new Audio('Sounds/Cowbell/lowcowbell.wav');
-		metronome.volume_level();
+		load_sound('cowbell');
 	});
 
+	function load_sound(sound) {
+		hi_sound = new Audio('Sounds/' + sound + '/hi' + sound + '.wav');
+		mid_sound = new Audio('Sounds/' + sound + '/mid' + sound + '.wav');
+		low_sound = new Audio('Sounds/' + sound + '/low' + sound + '.wav');
 
+		hi_sound.preload = 'auto';
+		mid_sound.preload = 'auto';
+		low_sound.preload = 'auto';
+
+		hi_sound.load();
+		mid_sound.load();
+		low_sound.load();
+
+		metronome.hi_sound = hi_sound.cloneNode();
+		metronome.mid_sound = mid_sound.cloneNode();
+
+		for (var i = 0; i < 9; i++) {
+			metronome.low_sound[i] = low_sound.cloneNode();
+		}
+
+		metronome.volume_level();	
+	}
+	
 	// First Beat Accent button
 	$("#first_beat_accent").click(function() {
 		metronome.first_beat_accent = metronome.first_beat_accent ? false : true;
@@ -389,7 +336,7 @@ $(document).ready(function() {
 	});
 
 	// Timer
-	$("#time_reset").click(function() {
+	$(".time_reset").click(function() {
 		metronome.timer = 0;
 	})
 

@@ -10,9 +10,10 @@
 		<!-- jQuery library -->
 		<script src="src/jquery-2.2.2.min.js"></script>
 
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+		<link rel="stylesheet" type="text/css" href="src/bootstrap-3.3.6/dist/css/bootstrap.min.css">
 		<!-- Latest compiled JavaScript -->
-		<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+		<script src="src/bootstrap-3.3.6/dist/js/bootstrap.min.js"></script>
 
 		<!-- Pie Timer -->
 		<script type="text/javascript" src="src/pietimer-master/jquery.pietimer.js"></script>
@@ -24,6 +25,9 @@
 
 		<link rel="stylesheet" type="text/css" href="src/metronome.css">
 		<script type="text/javascript" src="src/metronome.js"></script>
+
+		<!-- This prevents the throttling issue when changing browser tabs -->
+		<script type="text/javascript" src="src/HackTimer/HackTimer.js"></script>
 	</head>
 
 	<body>
@@ -47,6 +51,7 @@
 				<div id="bpm">
 					100 bpm
 				</div>
+
 				<div id="increment_bpm" class="button">
 					<!-- Increase Tempo (+ sign) -->
 					<div id="inc_tempo">
@@ -56,16 +61,10 @@
 					<div id="dec_tempo" class="button">
 						-
 					</div>
-					<input type="number" id="increment_interval"></input>
+
+					<input type="number" id="increment_interval" value="1" min="1" max="100"></input>
 				</div>
-
-				<!-- Enter Desired Tempo (Pops up empty box (New Panel)) -->
-				<!-- <div id="enter_tempo">
-					<input></input>
-				</div> -->
-
 			</div>
-
 
 			<!-- Second Row (Tempo Slider) -->
 			<div id="second_row" class="row">
@@ -75,11 +74,12 @@
 				</div>
 			</div>
 
-			<!-- Third Row (Time Signature) -->
+			<!-- Third Row (Time Signature/Bar Counter) -->
 			<div id="third_row" class="row">
 				<div id="time_sig">
 					Time Signature
 				</div>
+
 				<div id="time_sig_menu">
 					<div id="numerator" class="dropdown">
 						<button class="btn btn-primary dropdown-toggle numerator-dropdown" type="button" data-toggle="dropdown">
@@ -120,11 +120,16 @@
 						</ul>
 					</div>
 				</div>
+
+				<div id="bar_counter">
+					Bar Counter: 0
+				</div>
 			</div>
 
 			<!-- Fourth Row (Beat Subdivision) -->
 			<div id="fourth_row" class="row">
 				<div id="beat_subdiv">Beat Subdivision</div>
+
 				<div id="beat_subdiv_menu" class="dropdown">
 					<button class="btn btn-primary dropdown-toggle subdivison-dropdown" 
 					type="button" data-toggle="dropdown">
@@ -132,16 +137,16 @@
 						<span class="caret"></span>
 					</button>
 					<ul class="dropdown-menu">
-					  	<li><a href="#" id="quarter-notes" class="subdivision">Quarter Notes</a></li>
-					  	<li><a href="#" id="8th-notes" class="subdivision">8th Notes</a></li>
-					  	<li><a href="#" id="triplets" class="subdivision">Triplets</a></li>
-					  	<li><a href="#" id="16th-notes" class="subdivision">16th Notes</a></li>
-					  	<li><a href="#" id="sextuplets" class="subdivision">16th Note Triplets</a></li>
-					  	<li><a href="#" id="32nd-notes" class="subdivision">32nd Notes</a></li>
-					  	<li><a href="#" id="whole-notes" class="subdivision">Whole Notes</a></li>
-					  	<li><a href="#" id="half-notes" class="subdivision">Half Notes</a></li>
-					  	<li><a href="#" id="quintuplets" class="subdivision">Quintuplets</a></li>
-					  	<li><a href="#" id="septuplets" class="subdivision">Septuplets</a></li>
+					  	<li><a href="#" id="quarter-notes" class="subdivision" data-subdivision="1">Quarter Notes</a></li>
+					  	<li><a href="#" id="8th-notes" class="subdivision" data-subdivision="2">8th Notes</a></li>
+					  	<li><a href="#" id="triplets" class="subdivision" data-subdivision="3">Triplets</a></li>
+					  	<li><a href="#" id="16th-notes" class="subdivision" data-subdivision="4">16th Notes</a></li>
+					  	<li><a href="#" id="sextuplets" class="subdivision" data-subdivision="6">16th Note Triplets</a></li>
+					  	<li><a href="#" id="32nd-notes" class="subdivision" data-subdivision="8">32nd Notes</a></li>
+					  	<li><a href="#" id="whole-notes" class="subdivision" data-subdivision="0.25">Whole Notes</a></li>
+					  	<li><a href="#" id="half-notes" class="subdivision" data-subdivision="0.5">Half Notes</a></li>
+					  	<li><a href="#" id="quintuplets" class="subdivision" data-subdivision="5">Quintuplets</a></li>
+					  	<li><a href="#" id="septuplets" class="subdivision" data-subdivision="7">Septuplets</a></li>
 					</ul>
 				</div>
 			</div>
@@ -185,7 +190,7 @@
 			</div>
 
 			<!-- Eighth Row (Timer) -->
-			<div id="eighth_row" class="row">
+<!-- 			<div id="eighth_row" class="row">
 				<div id="timer_title">Timer</div>
 
 				<div id="minutes">
@@ -196,20 +201,21 @@
 					<div id="num_secs"><input></input> secs Left</div>
 				</div>
 				
-			</div>
+			</div> -->
 		</div>
-
-		<div id="pie_timer">hello</div>
-		<div id="timeplz">0</div>
-		<div class="time_reset">Reset Time</div>
-
-		<div id="keyboard_shortcuts">
-<!-- 			<ul>
+		<div id="timer">
+			<div id="pie_timer">Timer: </div>
+			<div id="timeplz">Seconds Elapsed: 0</div>
+			<div class="time_reset">Reset Time</div>	
+		</div>
+		
+<!-- 		<div id="keyboard_shortcuts">
+			<ul>
 				<li>Increment bpm by 1: Up Arrow</li>
 				<li>Decrement bpm by 1: Down Arrow</li>
 				<li>Start/Stop metronome: Spacebar</li>
-			</ul> -->
-		</div>
+			</ul>
+		</div> -->
 	</body>
 </html>
 
